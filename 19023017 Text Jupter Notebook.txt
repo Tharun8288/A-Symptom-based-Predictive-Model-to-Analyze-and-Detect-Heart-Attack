@@ -1,0 +1,387 @@
+# <span style='color:#800000'> Library Imports </span>
+
+import warnings
+warnings.filterwarnings("ignore")
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.rcParams['axes.labelsize'] = 18
+matplotlib.rcParams['xtick.labelsize'] = 18
+matplotlib.rcParams['ytick.labelsize'] = 18
+matplotlib.rcParams['text.color'] = '#800000'
+lbl="#800000"
+bicol=["#F70D1A","#64E986"]
+
+import seaborn as sns
+import plotly.express as px
+import plotly.figure_factory as ff
+
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import PassiveAggressiveClassifier
+from sklearn.naive_bayes import BernoulliNB
+from sklearn.linear_model import SGDClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.tree import DecisionTreeClassifier
+
+from sklearn.utils import resample
+from sklearn.utils import shuffle
+import tensorflow as tf
+
+from tensorflow.keras.applications import ResNet50
+from tensorflow.keras.layers import Dense, Flatten, Dropout,BatchNormalization ,Activation
+from tensorflow.keras.models import Model, Sequential
+from tensorflow.keras.optimizers import Adam 
+from tensorflow.keras.callbacks import ReduceLROnPlateau, ModelCheckpoint, EarlyStopping
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import precision_score, recall_score, f1_score, classification_report,accuracy_score
+
+# <span style='color:#800000'> Reading Heart Attack Data </span>
+
+heart1=pd.read_csv("heart.csv")
+heart1.head()
+
+heart1.shape
+
+heart1['output'].unique()
+
+heart1.info()
+
+## <span style='color:#800000'> Fomatting Features </span>
+
+heart=heart1.copy()
+heart['output']=heart['output'].replace(heart['output'].unique(),["Heart_Attack","Normal"])
+heart['exng']=heart['exng'].replace(heart['exng'].unique(),["No","Yes"])
+heart['cp']=heart['cp'].replace(heart['cp'].unique(),["Asymptomatic","Typical Angina","Non-anginal Pain","Atypical Angina"])
+heart['fbs']=heart['fbs'].replace(heart['fbs'].unique(),["> 120 mg/dl","< 120 mg/dl"])
+heart['sex']=heart['sex'].replace(heart['sex'].unique(),["Male","Female"])
+heart=heart.sample(frac=1)
+heart=heart.reset_index(drop=True)
+heart.head()
+
+## <span style='color:#800000'> Data Attributes </span>
+
+print("+++++++++++++++++++++++++++++++++++++++++++")
+print("\t Rows in Data: {}\n\t Columns in Data: {}".format(heart.shape[0],heart.shape[1]))
+print("+++++++++++++++++++++++++++++++++++++++++++")
+
+print("++++++++++++++++++++++++++++++++++")
+print("    Observations By Gneder")
+print("++++++++++++++++++++++++++++++++++")
+print("    Male: ",heart['sex'].value_counts().tolist()[0])
+print("    Female: ",heart['sex'].value_counts().tolist()[1])
+print("++++++++++++++++++++++++++++++++++")
+
+## <span style='color:#800000'> Checking Data for NaN Values </span>
+
+print("++++++++++++++++++++++++++++++++++")
+print("      Checking for NaN Data")
+print("++++++++++++++++++++++++++++++++++")
+print(heart.isna().sum())
+print("++++++++++++++++++++++++++++++++++")
+
+# <span style='color:#800000'> Analysis of Data </span>
+
+pd.crosstab(heart.age,heart['output']).plot(kind="area",figsize=(10,5),color=bicol)
+plt.title('Tendency of Heart Attack by Age Factor', fontsize=20,color=lbl)
+plt.xlabel('Age', fontsize=20,color=lbl)
+plt.ylabel('Count', fontsize=20,color=lbl)
+plt.grid()
+plt.savefig("age.jpg")
+plt.show()
+
+pd.crosstab(heart.trtbps,heart['output']).plot(kind="area",figsize=(10,5),color=bicol)
+plt.title('Tendency of Heart Attack by Resting Blood Pressure', fontsize=20,color=lbl)
+plt.xlabel('Resting Blood Pressure', fontsize=20,color=lbl)
+plt.ylabel('Count', fontsize=20,color=lbl)
+plt.grid()
+plt.savefig("trtbps.jpg")
+plt.show()
+
+yes=heart[heart['output']=="Heart_Attack"]
+no=heart[heart['output']=="Normal"]
+plt.figure(figsize=(10,5))
+plt.hist(yes.chol,color=bicol[0])
+plt.title('Tendency of Heart Attack by Blood Cholesterol', fontsize=20,color=lbl)
+plt.xlabel('Blood Cholesterol', fontsize=20,color=lbl)
+plt.ylabel('Count', fontsize=20,color=lbl)
+plt.grid()
+plt.savefig("cholyes.jpg")
+plt.show()
+
+plt.figure(figsize=(10,5))
+plt.hist(no.chol,color=bicol[1])
+plt.title('Normal Heart Condition by Blood Cholesterol', fontsize=20,color=lbl)
+plt.xlabel('Blood Cholesterol', fontsize=20,color=lbl)
+plt.ylabel('Count', fontsize=20,color=lbl)
+plt.grid()
+plt.savefig("cholno.jpg")
+plt.show()
+
+plt.figure(figsize=(10,5))
+plt.hist(yes.thalachh,color=bicol[0])
+plt.title('Tendency of Heart Attack by Maximum Heart Rate', fontsize=20,color=lbl)
+plt.xlabel('Maximum Heart Rate', fontsize=20,color=lbl)
+plt.ylabel('Count', fontsize=20,color=lbl)
+plt.grid()
+plt.savefig("thalachhyes.jpg")
+plt.show()
+
+plt.figure(figsize=(10,5))
+plt.hist(no.thalachh,color=bicol[1])
+plt.title('Normal Heart Condition by Maximum Heart Rate', fontsize=20,color=lbl)
+plt.xlabel('Maximum Heart Rate', fontsize=20,color=lbl)
+plt.ylabel('Count', fontsize=20,color=lbl)
+plt.grid()
+plt.savefig("thalachhno.jpg")
+plt.show()
+
+pd.crosstab(heart.sex,heart['output']).plot(kind="bar",figsize=(10,5),color=bicol)
+plt.title('Tendency of Heart Attack by Gender', fontsize=20,color=lbl)
+plt.xlabel('Gender', fontsize=20,color=lbl)
+plt.ylabel('Count', fontsize=20,color=lbl)
+plt.grid()
+plt.savefig("gender.jpg")
+plt.show()
+
+pd.crosstab(heart.cp,heart['output']).plot(kind="bar",figsize=(10,5),color=bicol)
+plt.title('Tendency of Heart Attack by Chest Pain', fontsize=20,color=lbl)
+plt.xlabel('Chest Pain', fontsize=20,color=lbl)
+plt.ylabel('Count', fontsize=20,color=lbl)
+plt.grid()
+plt.savefig("cp.jpg")
+plt.show()
+
+pd.crosstab(heart.fbs,heart['output']).plot(kind="bar",figsize=(10,5),color=bicol)
+plt.title('Tendency of Heart Attack by Fasting Sugar Level', fontsize=20,color=lbl)
+plt.xlabel('Fasting Sugar Level', fontsize=20,color=lbl)
+plt.ylabel('Count', fontsize=20,color=lbl)
+plt.grid()
+plt.savefig("fbs.jpg")
+plt.show()
+
+pd.crosstab(heart.exng,heart['output']).plot(kind="bar",figsize=(10,5),color=bicol)
+plt.title('Tendency of Heart Attack by Exercise Induced Angina', fontsize=20,color=lbl)
+plt.xlabel('Exercise Induced Angina', fontsize=20,color=lbl)
+plt.ylabel('Count', fontsize=20,color=lbl)
+plt.grid()
+plt.savefig("exng.jpg")
+plt.show()
+
+heart.head()
+
+# <span style='color:#800000'> Detection of Heart Attack by Machine Learning </span>
+
+## <span style='color:#800000'> Selection of Features </span>
+
+plt.figure(figsize=(22,12))
+plt.title("Correlation of Features with Output", fontsize=32,color=lbl)
+sns.heatmap(heart1.corr(),annot=True,cmap='copper',fmt='.3f',linewidths=1)
+plt.savefig("corr.jpg")
+plt.show()
+
+corref=heart1.corr()['output']
+init_preds=corref.index.tolist()[:-1]
+init_corrs=corref.tolist()[:-1]
+posall=[]
+negall=[]
+fin_preds=[]
+fin_corrs=[]
+for i in range(len(init_corrs)):
+    if init_corrs[i]<0:
+        negall.append(init_corrs[i])
+    else:
+        posall.append(init_corrs[i])
+negall=np.array(negall)
+posall=np.array(posall)
+for i in range(len(init_corrs)):
+    if init_corrs[i]>posall.mean() or init_corrs[i]<negall.mean():
+        fin_preds.append(init_preds[i])
+        fin_corrs.append(init_corrs[i])
+plt.figure(figsize=(12,9))
+plt.title("Final Predictors", fontsize=20,color=lbl)
+plt.barh(fin_preds,fin_corrs,color=bicol)
+plt.xlabel("Correlation", fontsize=20,color=lbl)
+plt.ylabel("Features", fontsize=20,color=lbl)
+plt.grid()
+
+for i in range(len(fin_preds)):
+    print("Feature: {}\nCorrelation: {}\n________________________".format(fin_preds[i],round(fin_corrs[i],3)))
+
+## <span style='color:#800000'> Data Resampling </span>
+
+heart_rs = resample(heart1, replace = True, n_samples = 8000, random_state = 0)
+heart_rs=pd.concat([heart_rs[fin_preds],heart_rs['output']],axis=1)
+heart_rs.shape
+
+heart_rs['output'].unique()
+
+heart_rs.info()
+
+heart_rs['output']=heart_rs['output'].replace(heart_rs['output'].unique(),["Normal","Heart_Attack"])
+
+## <span style='color:#800000'> Selection of Predictor and Target </span>
+
+X=heart_rs[fin_preds]
+y=heart_rs['output']
+
+## <span style='color:#800000'> Split Data </span>
+
+x_train,x_test,y_train,y_test=train_test_split(X,y, train_size=0.8, random_state=10)
+print("++++++++++++++++++++ Data Splitting +++++++++++++++++++++++")
+print("\n\tSplit Ratio (Train : Test): {}% : {}%\n".format(round((len(x_train)/len(X))*100),round((len(x_test)/len(X))*100)))
+print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+print("\n\t      Records under Train Set: {}".format(round(len(X)*(0.8))))
+print("\n\t      Records under Test Set: {}\n".format(round(len(X)*(1-0.8))))
+print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+## <span style='color:#800000'> Selection of Machine Learning Classifier </span>
+
+mlalgo=[
+    LogisticRegression(),
+    PassiveAggressiveClassifier(),
+    BernoulliNB(),
+    SGDClassifier(),
+    MLPClassifier(),
+    DecisionTreeClassifier(criterion='entropy',max_features='log2',splitter='random',min_samples_split=6,max_depth=10)
+]
+mlnms=[
+    "Logistic Regression",
+    "Passive Aggressive Classifier",
+    "Naive Bayes",
+    "SGD Classifier",
+    "MLP Classifier",
+    "Decision Tree Classifier"
+]
+
+## <span style='color:#800000'> Classifying Heart Attack </span>
+
+prec=[]
+rcl=[]
+f1=[]
+acc=[]
+print("_____________________________________________________________________________")
+for i in range(len(mlalgo)):
+    print("                            {} ".format(mlnms[i]))
+    print("_____________________________________________________________________________")
+    mlalgo[i].fit(x_train,y_train)
+    y_pred=mlalgo[i].predict(x_test)
+    score=accuracy_score(y_test,y_pred)
+    prec.append(round(precision_score(y_test, y_pred, average='weighted'),4)*100)
+    rcl.append(round(recall_score(y_test, y_pred, average='weighted'),4)*100)
+    f1.append(round(f1_score(y_test, y_pred, average='weighted'),4)*100)
+    acc.append(round(score*100,4))
+    cm=pd.crosstab(y_test, y_pred, rownames=['True'], colnames=['Predicted'], margins=True)
+    print("\nAccuracy: {}%\n".format(round(score,2)*100))
+    print("\nClassification Report for {} \n\n{}".format(mlnms[i],classification_report(y_test, y_pred)))
+    print("\nConfusion Matrix for {} \n\n{}\n".format(mlnms[i],cm.iloc[:2,:2]))
+    print("_____________________________________________________________________________")
+
+# <span style='color:#800000'> Detection of Heart Attack by Deep Learning  </span>
+
+y1=y.replace(y.unique(),[0,1])
+
+x_train_dp,x_test_dp,y_train_dp,y_test_dp=train_test_split(X,y1, train_size=0.8, random_state=10)
+print("++++++++++++++++++++ Data Splitting +++++++++++++++++++++++")
+print("\n\tSplit Ratio (Train : Test): {}% : {}%\n".format(round((len(x_train)/len(X))*100),round((len(x_test)/len(X))*100)))
+print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+print("\n\t      Records under Train Set: {}".format(round(len(X)*(0.8))))
+print("\n\t      Records under Test Set: {}\n".format(round(len(X)*(1-0.8))))
+print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+input_size = heart_rs.shape[1]-1
+output_size = 2 
+hidden_layer_size = 20
+heart_deep_cnn = tf.keras.Sequential([
+    tf.keras.layers.Dense(hidden_layer_size, input_shape=(input_size,), activation='relu'), # 1st hidden layer
+    tf.keras.layers.Dense(hidden_layer_size*3, activation='relu'),
+    tf.keras.layers.Dense(hidden_layer_size*3, activation='relu'),
+    tf.keras.layers.Dense(hidden_layer_size*3, activation='relu'),
+    tf.keras.layers.Dense(output_size, activation='softmax') # output layer
+])
+
+heart_deep_cnn.summary()
+
+heart_deep_cnn.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+batch_size = 8
+epochs = 100
+heart_deep_cnn_history = heart_deep_cnn.fit(x_train_dp,y_train_dp,batch_size=batch_size,epochs=epochs,verbose=1,validation_split=0.2)
+
+heart_deep_cnn_df=pd.DataFrame({
+    "Epoch":[i+1 for i in range(epochs)],
+    "Training Accuracy":heart_deep_cnn_history.history['accuracy'],
+    "Test Accuracy":heart_deep_cnn_history.history['val_accuracy'],
+    "Training Loss":heart_deep_cnn_history.history['loss'],
+    "Test Loss":heart_deep_cnn_history.history['val_loss']
+})
+heart_deep_cnn_df.to_csv("heart_deep_cnn_model.csv")
+heart_deep_cnn_df.head()
+
+heart_deep_cnn_df.iloc[:,1:3].plot(kind="line",figsize=(12,7),color=bicol)
+plt.title("Accuracies for Train and Validation for CNN",fontsize=20,color=lbl)
+plt.xlabel("Epoch",fontsize=20,color=lbl)
+plt.ylabel("Model Accuracies",fontsize=20,color=lbl)
+plt.grid()
+plt.show()
+
+heart_deep_cnn_df.iloc[:,3:].plot(kind="line",figsize=(12,7),color=bicol)
+plt.title("Losses for Train and Validation for CNN",fontsize=20,color=lbl)
+plt.xlabel("Epoch",fontsize=20,color=lbl)
+plt.ylabel("Model Loss",fontsize=20,color=lbl)
+plt.grid()
+plt.show()
+
+heart_deep_pred=heart_deep_cnn.predict(x_test_dp)
+tf_prediction1 = tf.nn.softmax(heart_deep_pred, axis=1)
+heart_deep_pred_label = tf.argmax(tf_prediction1, axis=1)
+heart_deep_pred_label = heart_deep_pred_label.numpy()
+y_test_dp=y_test_dp.replace(y_test_dp.unique(),["Normal","Heart_Attack"])
+print(y_test_dp.unique())
+heart_deep_pred_label=pd.Series(heart_deep_pred_label)
+heart_deep_pred_label=heart_deep_pred_label.replace(heart_deep_pred_label.unique(),['Normal','Heart_Attack'])
+y_test_dp
+
+cnn_prd_outcome=pd.DataFrame({"Actual":y_test_dp.tolist(),"Predicted":heart_deep_pred_label.tolist()})
+cnnct=pd.crosstab(cnn_prd_outcome['Actual'],cnn_prd_outcome['Predicted'],rownames=['True'], colnames=['Predicted'], margins=True)
+cnnct.iloc[:2,:2]
+
+print("Accuracy: ",round(accuracy_score(cnn_prd_outcome["Actual"],cnn_prd_outcome["Predicted"]),4)*100,"%")
+print("Precision: ",round(precision_score(cnn_prd_outcome["Actual"],cnn_prd_outcome["Predicted"], average='micro'),4)*100,"%")
+print("Recall: ",round(recall_score(cnn_prd_outcome["Actual"],cnn_prd_outcome["Predicted"], average='micro'),4)*100,"%")
+print("F1-Score: ",round(f1_score(cnn_prd_outcome["Actual"],cnn_prd_outcome["Predicted"], average='micro'),4)*100,"%")
+print(classification_report(cnn_prd_outcome["Actual"],cnn_prd_outcome["Predicted"]))
+
+# <span style='color:#800000'> Performance Comparison of Classifiers  </span>
+
+prec.append(round(precision_score(cnn_prd_outcome["Actual"],cnn_prd_outcome["Predicted"], average='micro'),4)*100)
+rcl.append(round(recall_score(cnn_prd_outcome["Actual"],cnn_prd_outcome["Predicted"], average='micro'),4)*100)
+f1.append(round(f1_score(cnn_prd_outcome["Actual"],cnn_prd_outcome["Predicted"], average='micro'),4)*100)
+acc.append(round(accuracy_score(cnn_prd_outcome["Actual"],cnn_prd_outcome["Predicted"]),4)*100)
+mlnms.append("Convolutional Neural Network")
+
+heart_clf_out=pd.DataFrame({
+    "Classifiers":mlnms,
+    "Accuracy":acc,
+    "Precision":prec,
+    "Recall":rcl,
+    "F1-Score":f1,
+    
+})
+
+for i in heart_clf_out.columns.tolist()[1:]:
+    heart_clf_out=heart_clf_out.sort_values(by=i,ascending=False)
+    fig = px.bar(heart_clf_out, y=i, x="Classifiers",text=i,color="Classifiers",
+                 title="Comparison of {}".format(i),height=600,width=1000)
+    fig.update_layout(
+        font=dict(
+            family="Times New Roman, Bold",
+            size=20,
+            color="black"
+        )
+    )
+    fig.show()
+
+heart_clf_out
+
